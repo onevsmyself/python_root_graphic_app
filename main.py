@@ -26,16 +26,6 @@ def make_input_line(window):
     input_line.setPlaceholderText("Ваша функция")
 
 
-def make_sound():
-    player = QMediaPlayer()
-    audio = QAudioOutput()
-    player.setAudioOutput(audio)
-    fullpath = QDir.current().absoluteFilePath("music/music1.mp3")
-    url = QUrl.fromLocalFile(fullpath)
-    player.setSource(url)
-    player.play()
-
-
 def set_label_with_buttons(window):
     label = QLabel("Границы отрезка", window)
     label.setStyleSheet(u"color: white;\n"
@@ -114,9 +104,15 @@ def set_label_with_buttons(window):
     step_line.setPlaceholderText("eps")
   
 
+def make_sound(window):
+    player = QMediaPlayer()
+    audio = QAudioOutput(window)
+    player.setAudioOutput(audio)
+    fullpath = QDir.current().absoluteFilePath("music/music2.mp3")
+    url = QUrl.fromLocalFile(fullpath)
+    player.setSource(url)
 
-
-
+    return player
 
 
 
@@ -125,10 +121,11 @@ app = QApplication([])
 window = QMainWindow()
 
 set_window()
-make_sound()
 set_label_with_buttons(window)
 input_line = make_input_line(window)
 
+player = make_sound(window)
+player.play()
 
 window.show()
 app.exec()
