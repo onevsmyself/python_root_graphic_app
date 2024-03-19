@@ -1,2 +1,2 @@
 
-    table.resize(650, 190)
+    input_line.setValidator(QRegularExpressionValidator(
