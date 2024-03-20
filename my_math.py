@@ -1,3 +1,7 @@
+import math
+
+builtins = math.__dict__
+
 def gen_array(start, end, step):
     array = []
     while start < end:
@@ -10,23 +14,16 @@ def gen_array(start, end, step):
 def function_output(x, function):
     y = []
     for x_val in x:
-        is_worked, val = func(x_val, function)
-        if is_worked:
+        is_success, val = func(x_val, function)
+        if is_success:
             y.append(val)
-        else:
-            return []
     return y
     
 
 def func(x, function):
     try:
-        val = eval(function)
+        val = eval(compile(function, "<string>", 'eval'), builtins, {"x": x})
         return True, val
     except:
+        print(x, func)
         return False, '0'
-    
-
-# def root(function, max_cnt, eps):
-
-
-
