@@ -108,7 +108,7 @@ def make_sound(window):
     player = QMediaPlayer()
     audio = QAudioOutput(window)
     player.setAudioOutput(audio)
-    fullpath = QDir.current().absoluteFilePath("music/music2.mp3")
+    fullpath = QDir.current().absoluteFilePath("music/music3.mp3")
     url = QUrl.fromLocalFile(fullpath)
     player.setSource(url)
 
