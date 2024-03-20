@@ -9,6 +9,7 @@ from matplotlib.figure import Figure
 import numpy as np
 
 from add_module import *
+from my_math import *
 
 def set_window():
     window = QMainWindow()
@@ -33,22 +34,22 @@ def set_window():
     
 
 def make_function_input(window):
-    input_line = QLineEdit(window)
+    function_input = QLineEdit(window)
     
-    input_line.resize(650, 60)
-    input_line.move(25, 25)
-    input_line.setFont(QFont("Arial", 28))
-    input_line.setAlignment(Qt.AlignmentFlag(4))
+    function_input.resize(650, 60)
+    function_input.move(25, 25)
+    function_input.setFont(QFont("Arial", 28))
+    function_input.setAlignment(Qt.AlignmentFlag(4))
 
-    input_line.setMaxLength(33)
-    input_line.setStyleSheet("background-color: rgba(0, 95, 141, 100);" 
+    function_input.setMaxLength(33)
+    function_input.setStyleSheet("background-color: rgba(0, 95, 141, 100);" 
                              "border: 1px solid rgba(255, 255, 255, 40);" 
                              "border-radius: 7px;")
-    input_line.setPlaceholderText("Ваша функция")
-    input_line.setValidator(QRegularExpressionValidator(
+    function_input.setPlaceholderText("Ваша функция (x^2)")
+    function_input.setValidator(QRegularExpressionValidator(
         QRegularExpression(r"^[0-9x*^/.()+-]+$")))
 
-    return input_line
+    return function_input
 
 
 def make_boundaries_input(window):
@@ -70,7 +71,7 @@ def make_boundaries_input(window):
     start_section_line.move(30, 150)
     start_section_line.setPlaceholderText("a")
     start_section_line.setValidator(QRegularExpressionValidator(
-        QRegularExpression(r"([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][-+]?[0-9]+)?")))
+        QRegularExpression(r"[-+]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][-+]?[0-9]+)?")))
 
     end_section_line = QLineEdit(window)
     end_section_line.setFont(QFont("Ariel", 24))
@@ -82,7 +83,7 @@ def make_boundaries_input(window):
     end_section_line.move(245, 150)
     end_section_line.setPlaceholderText("b")
     end_section_line.setValidator(QRegularExpressionValidator(
-        QRegularExpression(r"([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][-+]?[0-9]+)?")))
+        QRegularExpression(r"[-+]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][-+]?[0-9]+)?")))
 
     return start_section_line, end_section_line
 
@@ -161,15 +162,6 @@ def make_inaccur_input(window):
         QRegularExpression(r"^-?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?$")))
 
     return eps_line
-  
-
-# def make_sound(window):
-#     player = QMediaPlayer()
-#     audio = QAudioOutput(window)
-#     player.setAudioOutput(audio)
-#     fullpath = QDir.current().absoluteFilePath("music/music3.mp3")
-#     url = QUrl.fromLocalFile(fullpath)
-#     player.setSource(url)
 
 
 def make_button(text, window, x, y, width, height):
@@ -216,7 +208,7 @@ def print_table(table):
 
 
 def delete_inputs():
-    list_lines = [input_line, bound_start, bound_end, step, max_count, eps]
+    list_lines = [function_input, bound_start, bound_end, step, max_count, eps]
     for x in list_lines:
         x.setText("")
 
@@ -234,9 +226,15 @@ def print_graph(label):
     end_val = float(bound_end.text())
     step_val = float(step.text())
     
-    x = make_array(start_val, end_val, step_val)
-    y = eval(compile())
+    x = gen_array(start_val, end_val, step_val)
+    function = str(function_input.text())
+    function = function.replace("^", "**")
+    y = function_output(x, function)
 
+    if len(y) == 0:
+        return create_error("Ошибка при счёте ", "error in counting result")
+
+    ax.set_title(f"График функции {function}")
     ax.set_xlabel('Значения x')
     ax.set_ylabel('Значения y')
     ax.plot(x, y)
@@ -263,15 +261,6 @@ def check_data():
     
     except ValueError:
         return False
-
-
-def make_array(start, end, step):
-    array = []
-    while start < end:
-        array.append(start)
-        start += step
-    array.append(end)
-    return array 
 
 
 # функция для создания ошибки
@@ -305,7 +294,7 @@ app = QApplication([])
 
 window, label = set_window()
 
-input_line = make_function_input(window)
+function_input = make_function_input(window)
 bound_start, bound_end = make_boundaries_input(window)
 step = make_step_input(window)
 max_count = make_max_count_input(window)
