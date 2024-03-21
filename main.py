@@ -6,12 +6,13 @@ from PyQt6.QtMultimedia import *
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 
-import numpy as np
-
 from add_module import *
 from my_math import *
 
+
+# Устанавливает главное окно и фон для графика
 def set_window():
+    # создаём главное окно
     window = QMainWindow()
 
     window.setWindowTitle("Графическое приложение")
@@ -20,19 +21,20 @@ def set_window():
                          "stop:0 rgba(0, 182, 119, 255),stop:0.427447 rgba(41, 61, 132, 235)," 
                          "stop:1 rgba(187, 13, 142, 255));")
     window.setWindowIcon(QIcon("pictures/icon_new.jpg"))
-
+    # добавляем фон для графика
     label = QLabel(window)
-    label.resize(600, 600)
-    label.move(750, 50)
+    label.resize(650, 650)
+    label.move(725, 25)
 
     pixmap = QPixmap("pictures/back_pic.png")
-    pixmap = pixmap.scaled(600, 600)
+    pixmap = pixmap.scaled(650, 650)
 
     label.setPixmap(pixmap)
 
     return window, label
     
 
+# Делаем строку для ввода функции
 def make_function_input(window):
     function_input = QLineEdit(window)
     
@@ -45,34 +47,36 @@ def make_function_input(window):
     function_input.setStyleSheet("background-color: rgba(0, 95, 141, 100);" 
                              "border: 1px solid rgba(255, 255, 255, 40);" 
                              "border-radius: 7px;")
-    function_input.setPlaceholderText("Ваша функция (x^2)")
-    function_input.setValidator(QRegularExpressionValidator(
-        QRegularExpression(r"^[0-9x*^/.()+-]+$")))
+    function_input.setPlaceholderText("Ваша функция (a*x+x^b+x**c)")
+    # function_input.setValidator(QRegularExpressionValidator(
+    #     QRegularExpression(r'^((sin|cos|tan|cot|sec|csc|exp|log|sqrt)\s*\(\s*((-?\d+(\.\d+)?)|x)\s*\))$')))#r"^[0-9x*^/.()+-]+$"
 
     return function_input
 
 
+# Делаем строки для ввода границ отрезка
 def make_boundaries_input(window):
+    # Создаём прозрачный текст для интерфейса с указанием на границы отрезка
     label = QLabel("Границы отрезка", window)
     label.setStyleSheet(u"color: white;\n"
                         "font-size: 24pt;\n"
                         "background-color: none;\n"
                         "border: none;")
     label.resize(250, 60)
-    label.move(100, 85)
-
+    label.move(105, 80)
+    # ввод начала отрезка
     start_section_line = QLineEdit(window)
-    start_section_line.setFont(QFont("Ariel", 24))
+    start_section_line.setFont(QFont("Ariel", 22))
     start_section_line.setStyleSheet("background-color: rgba(255, 255, 255, 30);"
                                      "border: 1px solid rgba(255, 255, 255, 40);"
                                      "border-radius: 7px;")
     start_section_line.setMaxLength(11)
     start_section_line.resize(200, 60)
-    start_section_line.move(30, 150)
+    start_section_line.move(30, 140)
     start_section_line.setPlaceholderText("a")
     start_section_line.setValidator(QRegularExpressionValidator(
         QRegularExpression(r"[-+]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][-+]?[0-9]+)?")))
-
+    # ввод конца отрезка
     end_section_line = QLineEdit(window)
     end_section_line.setFont(QFont("Ariel", 24))
     end_section_line.setStyleSheet("background-color: rgba(255, 255, 255, 30);"
@@ -80,7 +84,7 @@ def make_boundaries_input(window):
                                     "border-radius: 7px;")
     end_section_line.setMaxLength(11)
     end_section_line.resize(200, 60)
-    end_section_line.move(245, 150)
+    end_section_line.move(245, 140)
     end_section_line.setPlaceholderText("b")
     end_section_line.setValidator(QRegularExpressionValidator(
         QRegularExpression(r"[-+]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][-+]?[0-9]+)?")))
@@ -88,24 +92,26 @@ def make_boundaries_input(window):
     return start_section_line, end_section_line
 
 
+# Делаем строку для ввода шага
 def make_step_input(window):
+    # Создаём прозрачный текст для интерфейса с указанием на шаг разбиения
     label = QLabel("Шаг", window)
     label.setStyleSheet(u"color: white;\n"
                         "font-size: 24pt;\n"
                         "background-color: none;\n"
                         "border: none;")
     label.resize(200, 60)
-    label.move(535, 85)
-
+    label.move(540, 80)
+    # ввод для шага
     step_line = QLineEdit(window)
-    step_line.setFont(QFont("Ariel", 24))
+    step_line.setFont(QFont("Ariel", 22))
     step_line.setStyleSheet("background-color: rgba(255, 255, 255, 30);"
                             "border: 1px solid rgba(255, 255, 255, 40);"
                             "border-radius: 7px;")
     
     step_line.setMaxLength(11)
     step_line.resize(205, 60)
-    step_line.move(470, 150)
+    step_line.move(470, 140)
     step_line.setPlaceholderText("step")
     step_line.setValidator(QRegularExpressionValidator(
         QRegularExpression(r"([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][-+]?[0-9]+)?")))
@@ -113,7 +119,9 @@ def make_step_input(window):
     return step_line
 
 
+# Делаем строку для ввода количества операций
 def make_max_count_input(window):
+    # Создаём прозрачный текст для интерфейса с указанием на максимальное кол-во итераций
     label = QLabel("Макс. кол-во итераций", window)
     label.setStyleSheet(u"color: white;\n"
                         "font-size: 22pt;\n"
@@ -121,17 +129,17 @@ def make_max_count_input(window):
                         "border: none;")
                         
     label.resize(340, 40)
-    label.move(50, 225)
-
+    label.move(55, 205)
+    # ввод для кол-во итераций
     max_count_line = QLineEdit(window)
-    max_count_line.setFont(QFont("Ariel", 24))
+    max_count_line.setFont(QFont("Ariel", 22))
     max_count_line.setStyleSheet("background-color: rgba(255, 255, 255, 30);"
                                  "border: 1px solid rgba(255, 255, 255, 40);"
                                  "border-radius: 7px;")
     
     max_count_line.setMaxLength(6)
     max_count_line.resize(340, 60)
-    max_count_line.move(30, 280)
+    max_count_line.move(30, 260)
     max_count_line.setPlaceholderText("Max count less 10^7")
     max_count_line.setValidator(QRegularExpressionValidator(
         QRegularExpression(r"[0-9]+")))
@@ -139,24 +147,26 @@ def make_max_count_input(window):
     return max_count_line
 
 
+# Делаем строку для ввода погрешности счёта
 def make_inaccur_input(window):
+    # Создаём прозрачный текст для интерфейса с указанием на погрешность измерения
     label = QLabel("Погрешность измер.", window)
     label.setStyleSheet(u"color: white;\n"
                         "font-size: 22pt;\n"
                         "background-color: none;\n"
                         "border: none;")
     label.resize(285, 40)
-    label.move(390, 225)
-
+    label.move(395, 205)
+    # ввод для погрешности
     eps_line = QLineEdit(window)
-    eps_line.setFont(QFont("Ariel", 24))
+    eps_line.setFont(QFont("Ariel", 22))
     eps_line.setStyleSheet("background-color: rgba(255, 255, 255, 30);" 
                            "border: 1px solid rgba(255, 255, 255, 40);" 
                            "border-radius: 7px;")
     
     eps_line.setMaxLength(16)
     eps_line.resize(285, 60)
-    eps_line.move(390, 280)
+    eps_line.move(390, 260)
     eps_line.setPlaceholderText("eps (<1% (b-a))")
     eps_line.setValidator(QRegularExpressionValidator(
         QRegularExpression(r"^-?[0-9]+(\.[0-9]+)?([eE][-+]?[0-9]+)?$")))
@@ -164,6 +174,7 @@ def make_inaccur_input(window):
     return eps_line
 
 
+# Создание кнопок по положению, размеру с дефолтным стилем
 def make_button(text, window, x, y, width, height):
     button = QPushButton(text, window)
     button.setEnabled(True)
@@ -177,48 +188,71 @@ def make_button(text, window, x, y, width, height):
     return button
 
 
+# Создание таблицы для дальнейшего вывода корней
 def make_table_output(window):
-    table = QTextEdit(window)
-    table.setFont(QFont("Ariel", 20))
+
+    table = QTableWidget(window)
+    table.setFont(QFont("Ariel", 12))
     table.setStyleSheet("background-color: rgba(255, 255, 255, 30);"
                         "border: 1px solid rgba(255, 255, 255, 40);"
                         "border-radius: 7px;")
+    table.resize(641, 245)
+    table.move(25, 430)
 
-    table.setEnabled(False)
-    table.resize(650, 190)
-    table.move(25, 475)
-    table.setPlaceholderText("Здесь будет ваша таблица")
-    table.setAlignment(Qt.AlignmentFlag(5))
+    table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+
+    table.setColumnCount(6)
+
+    header = table.horizontalHeader()
+    header.setStyleSheet("background-color: lightblue; color: black;")
+    header.setFont(QFont("Ariel", 18))
+
+    table.setHorizontalHeaderLabels(["№ Корня", '[xi; x(i+1)]', 'x`', 'f(x`)', 'Итерации', 'Код ошибки'])
+
     return table
 
 
+# Создание кнопок для программы с их связыванием с назначением
 def make_buttons(window, label):
-    prn_table = make_button(" Вывести \n таблицу ", window, 25, 365, 200, 85)
+    prn_table = make_button(" Вывести \n таблицу ", window, 25, 340, 200, 70)
     prn_table.clicked.connect(lambda: print_table(table))
 
-    prn_graph = make_button(" Вывести \n график ", window, 250, 365, 200, 85)
+    prn_graph = make_button(" Вывести \n график ", window, 250, 340, 200, 70)
     prn_graph.clicked.connect(lambda: print_graph(label))
 
-    del_data = make_button(" Удалить \n данные ", window, 475, 365, 200, 85)
+    del_data = make_button(" Удалить \n данные ", window, 475, 340, 200, 70)
     del_data.clicked.connect(delete_inputs)
 
 
+# Функция для вывода в таблицу строки
 def print_table(table):
-    work_in_table(table)
+    row_count = table.rowCount()
+    table.insertRow(row_count)
+    table.setItem(row_count, 0, QTableWidgetItem("1"))
+    table.setItem(row_count, 1, QTableWidgetItem("2"))
+    table.setItem(row_count, 2, QTableWidgetItem("3"))
+    table.setItem(row_count, 3, QTableWidgetItem("4"))
+    table.setItem(row_count, 4, QTableWidgetItem("5"))
+    table.setItem(row_count, 5, QTableWidgetItem("6"))
+    
 
-
+# Функция, которая отчищает поля и таблицу
 def delete_inputs():
     list_lines = [function_input, bound_start, bound_end, step, max_count, eps]
     for x in list_lines:
         x.setText("")
+    table.setRowCount(0)
 
 
+# Вывод графика с проверкой входных данных и результатов функции
 def print_graph(label):
+    is_success, txt = check_data()
+    if not is_success:
+        return create_error(f"Ошибка в данных.\n{txt}", "input_error")
 
-    if not check_data():
-        return create_error("  Ошибка в вводе границ\n     или шага разбиения", "boundaries_error")
-
-    fig = Figure(figsize=(6, 6))
+    fig = Figure(figsize=(6.5, 6.5))
+    
+    fig.set_facecolor("#947aab")
 
     ax = fig.add_subplot()
 
@@ -228,16 +262,22 @@ def print_graph(label):
     
     x = gen_array(start_val, end_val, step_val)
     function = str(function_input.text())
+
     function = function.replace("^", "**")
     y = function_output(x, function)
 
     if len(y) == 0:
-        return create_error("Ошибка при счёте ", "error in counting result")
+        return create_error("Ошибка при счёте функции", "error in counting result")
 
-    ax.set_title(f"График функции {function}")
+    ax.set_title(f"График функции {str(function_input.text())}\n" +
+                 f"на отрезке [{start_val}; {end_val}]")
+    ax.set_facecolor("#c2b9c9")
     ax.set_xlabel('Значения x')
     ax.set_ylabel('Значения y')
+    ax.xaxis.label.set_fontsize(18)
+    ax.yaxis.label.set_fontsize(12)
     ax.plot(x, y)
+    ax.grid()
 
     canvas = FigureCanvasQTAgg(fig)
 
@@ -250,18 +290,62 @@ def print_graph(label):
     label.setLayout(layout)
 
 
+# Запускает проверку параметром и проверку функции
 def check_data():
+    is_success, rc =  check_params_primary()
+    if not is_success:
+        return False, rc
+    
+    is_success, rc =  check_func_primary()
+    if not is_success:
+        return False, rc
+    
+    return True, ''
+
+
+# проверяет, все ли поля заполнены, и верно ли это логически
+def check_params_primary():
+    if len(bound_start.text()) == 0:
+        return False, 'Не введено начало отрезка'
+    if len(bound_end.text()) == 0:
+        return False, 'Не введен конец отрезка'
+    if len(step.text()) == 0:
+        return False, 'Не введен шаг разбиения'
+    
     try:
-        step_val = float(step.text())
         st_val = float(bound_start.text())
         en_val = float(bound_end.text())
-        if st_val >= en_val or step_val <= 0 or (en_val - st_val) < step_val:
-            return False
-        return True
+        step_val = float(step.text())
+        
+
+        if st_val >= en_val:
+            return False, 'Границы отрезка (a >= b)'
+        elif step_val <= 0:
+            return False, 'Шаг разбиения (<=0)'
+        elif (en_val - st_val) < step_val:
+            return False, 'Шаг разбиения больше\nотрезка'
+        return True, ''
     
     except ValueError:
-        return False
+        return False, 'Перевод данных'
 
+
+# делает элементарную проверку на верность введённое функции
+def check_func_primary():
+    my_func = str(function_input.text())
+    func_sym = 'x0123456789+-*^/().'
+    func_trig = ['log', 'sin', 'cos', 'exp', 'tan']
+
+    if len(my_func) == 0:
+        return False, 'Не введена функция'
+    for element in func_trig:
+        my_func = my_func.replace(f"{element}", '')
+    for element in func_sym:
+        my_func = my_func.replace(f"{element}", '')
+
+    if len(my_func) > 0:
+        return False, 'Функция неправильна'
+    return True, ''
 
 # функция для создания ошибки
 def create_error(text, head):
@@ -272,10 +356,10 @@ def create_error(text, head):
     error.setStyleSheet("background-color: rgba(103, 59, 125, 200); border-radius: 4px;")
     # текст ошибки
     text_er = QLabel(error)
-    text_er.move(5, 10)
     text_er.setStyleSheet("background-color: none; border-radius: 4px;")
     text_er.setText(text)
-    text_er.setFont(QFont("Arial", 18))
+    text_er.move(5, 5)
+    text_er.setFont(QFont("Arial", 16))
     # кнопка ошибка
     button_exit = QPushButton("ОК", error)
     button_exit.setFont(QFont("Arial", 18))
@@ -289,11 +373,12 @@ def create_error(text, head):
     error.exec()
 
 
-
 app = QApplication([])
 
+# Создание приложения
 window, label = set_window()
 
+# Создания элементов интерфейса для взаимодействия
 function_input = make_function_input(window)
 bound_start, bound_end = make_boundaries_input(window)
 step = make_step_input(window)
@@ -301,10 +386,11 @@ max_count = make_max_count_input(window)
 eps = make_inaccur_input(window)
 table = make_table_output(window)
 
+# Создание кнопок для работы
 make_buttons(window, label)
 
-player = make_sound_player(window)
-player.play()
+# Дополнительная функция для себя
+make_sound(window)
 
 window.show()
 app.exec()
