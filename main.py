@@ -7,8 +7,9 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 
 from add_module import *
-from my_math import *
+from func_defs import *
 
+import numpy as np
 
 # Устанавливает главное окно и фон для графика
 def set_window():
@@ -47,6 +48,7 @@ def make_function_input(window):
     function_input.setStyleSheet("background-color: rgba(0, 95, 141, 100);" 
                              "border: 1px solid rgba(255, 255, 255, 40);" 
                              "border-radius: 7px;")
+                             #"color: white;")
     function_input.setPlaceholderText("Ваша функция (a*x+x^b+x**c)")
     # function_input.setValidator(QRegularExpressionValidator(
     #     QRegularExpression(r'^((sin|cos|tan|cot|sec|csc|exp|log|sqrt)\s*\(\s*((-?\d+(\.\d+)?)|x)\s*\))$')))#r"^[0-9x*^/.()+-]+$"
@@ -205,9 +207,9 @@ def make_table_output(window):
 
     header = table.horizontalHeader()
     header.setStyleSheet("background-color: lightblue; color: black;")
-    header.setFont(QFont("Ariel", 18))
+    header.setFont(QFont("Ariel", 16))
 
-    table.setHorizontalHeaderLabels(["№ Корня", '[xi; x(i+1)]', 'x`', 'f(x`)', 'Итерации', 'Код ошибки'])
+    table.setHorizontalHeaderLabels(["№ Корня", '[xi; x(i+1)]', 'x`', 'f(x`)', 'Итерации', 'Код работы'])
 
     return table
 
@@ -226,15 +228,47 @@ def make_buttons(window, label):
 
 # Функция для вывода в таблицу строки
 def print_table(table):
-    row_count = table.rowCount()
-    table.insertRow(row_count)
-    table.setItem(row_count, 0, QTableWidgetItem("1"))
-    table.setItem(row_count, 1, QTableWidgetItem("2"))
-    table.setItem(row_count, 2, QTableWidgetItem("3"))
-    table.setItem(row_count, 3, QTableWidgetItem("4"))
-    table.setItem(row_count, 4, QTableWidgetItem("5"))
-    table.setItem(row_count, 5, QTableWidgetItem("6"))
+    table.setRowCount(0)
+    is_success, txt = check_data(1)
+    if not is_success:
+        return create_error(f"Ошибка в данных.\n{txt}", "input_error")
     
+    start_val = float(bound_start.text())
+    end_val = float(bound_end.text())
+    step_val = float(step.text())
+    my_function = function_input.text()
+    my_function = my_function.replace("^", "**")
+    eps_val = float(eps.text())
+    mx_cnt_val = int(max_count.text())
+
+    rc, val =  is_continuous(start_val, end_val, my_function)
+
+    if not rc:
+        return create_error(f"Ошибка при счёте функции\n в точке {val}", "error in counting result")
+
+
+    x = gen_array(start_val, end_val, step_val)
+    fst_bound = x[0]
+    root_num = 0
+    for snd_bound in x[1::]:
+        if is_root(fst_bound, snd_bound, my_function):
+            newton_rc, root, iters = simple_newton_for_bound(my_function, fst_bound, snd_bound, eps_val, mx_cnt_val)
+            rc, f_root = cnt_func(root, my_function)
+            if not rc:
+                print(fst_bound, snd_bound)
+                return create_error(f"Ошибка при счёте функции\n в точке {val}", "error in counting result")
+            table.insertRow(root_num)
+            table.setItem(root_num, 0, QTableWidgetItem(f'{root_num + 1}'))
+            table.setItem(root_num, 1, QTableWidgetItem(f'[{fst_bound:.6}; {snd_bound:.6}]'))
+            table.setItem(root_num, 2, QTableWidgetItem(f'{root:.6}'))
+            table.setItem(root_num, 3, QTableWidgetItem(f'{f_root:.1e}'))
+            table.setItem(root_num, 4, QTableWidgetItem(str(iters)))
+            table.setItem(root_num, 5, QTableWidgetItem(str(newton_rc)))
+
+            root_num += 1
+        fst_bound = snd_bound
+    if root_num == 0:
+        create_error(f"На отрезке [{start_val:.4}; {end_val:.4}] не было\n обнаружено корней", "not roots")
 
 # Функция, которая отчищает поля и таблицу
 def delete_inputs():
@@ -246,36 +280,37 @@ def delete_inputs():
 
 # Вывод графика с проверкой входных данных и результатов функции
 def print_graph(label):
-    is_success, txt = check_data()
+    is_success, txt = check_data(0)
     if not is_success:
         return create_error(f"Ошибка в данных.\n{txt}", "input_error")
-
-    fig = Figure(figsize=(6.5, 6.5))
     
-    fig.set_facecolor("#947aab")
-
-    ax = fig.add_subplot()
-
     start_val = float(bound_start.text())
     end_val = float(bound_end.text())
     step_val = float(step.text())
-    
+    my_function = str(function_input.text())
+    my_function = my_function.replace("^", "**")
+
+    rc, val =  is_continuous(start_val, end_val, my_function)
+
+    if not rc:
+        return create_error(f"Ошибка при счёте функции\n в точке {val}", "error in counting result")
+
     x = gen_array(start_val, end_val, step_val)
-    function = str(function_input.text())
+    y = function_output(x, my_function)
 
-    function = function.replace("^", "**")
-    y = function_output(x, function)
+    fig = Figure(figsize=(6.5, 6.5))
+    fig.set_facecolor("#947aab")
 
-    if len(y) == 0:
-        return create_error("Ошибка при счёте функции", "error in counting result")
-
+    ax = fig.add_subplot()
     ax.set_title(f"График функции {str(function_input.text())}\n" +
                  f"на отрезке [{start_val}; {end_val}]")
     ax.set_facecolor("#c2b9c9")
     ax.set_xlabel('Значения x')
     ax.set_ylabel('Значения y')
+
     ax.xaxis.label.set_fontsize(18)
     ax.yaxis.label.set_fontsize(12)
+
     ax.plot(x, y)
     ax.grid()
 
@@ -291,7 +326,7 @@ def print_graph(label):
 
 
 # Запускает проверку параметром и проверку функции
-def check_data():
+def check_data(var):
     is_success, rc =  check_params_primary()
     if not is_success:
         return False, rc
@@ -300,6 +335,14 @@ def check_data():
     if not is_success:
         return False, rc
     
+    if var == 1:
+        is_success, rc =  check_eps()
+        if not is_success:
+            return False, rc
+        
+        is_success, rc = check_iters_cnt()
+        if not is_success:
+            return False, rc
     return True, ''
 
 
@@ -345,7 +388,39 @@ def check_func_primary():
 
     if len(my_func) > 0:
         return False, 'Функция неправильна'
+    
     return True, ''
+
+
+# делает проверку на то, что погрешность измерения хотя бы меньше 1%, чем длина отрезка
+def check_eps():
+    if len(eps.text()) == 0:
+        return False, 'Не введена погрешность' 
+    try:
+        eps_val = float(eps.text())
+        st_val = float(bound_start.text())
+        en_val = float(bound_end.text())
+
+        if (en_val - st_val) / 100 <= eps_val:
+            return False, 'Погрешность >= 1% от отрезка'
+    except ValueError:
+        return False, 'Перевод погрешности'
+    return True, ''
+
+
+# проверка, введено ли максимальное кол-во итераций для вычисления корней
+def check_iters_cnt():
+    if len(max_count.text()) == 0:
+        return False, 'Не введено макс. кол-во итераций'
+    try:
+        mx_iters_val = int(max_count.text())
+
+        if mx_iters_val < 10:
+            return False, 'Сомнительное кол-во операций'
+    except ValueError:
+        return False, 'Перевод максимального кол-во итераций'
+    return True, ''
+
 
 # функция для создания ошибки
 def create_error(text, head):
@@ -389,8 +464,8 @@ table = make_table_output(window)
 # Создание кнопок для работы
 make_buttons(window, label)
 
-# Дополнительная функция для себя
-make_sound(window)
+# # Дополнительная функция для себя
+# make_sound(window)
 
 window.show()
 app.exec()
