@@ -2,23 +2,23 @@ from PyQt6.QtCore import QUrl, QDir
 from PyQt6.QtMultimedia import *
 
 
-def make_sound1(window):
-    player = QMediaPlayer()
-    audio = QAudioOutput(window)
+# def make_sound1(window):
+#     player = QMediaPlayer()
+#     audio = QAudioOutput(window)
 
-    player.setAudioOutput(audio)
-    fullpath = QDir.current().absoluteFilePath("music/music3.mp3")
-    url = QUrl.fromLocalFile(fullpath)
+#     player.setAudioOutput(audio)
+#     fullpath = QDir.current().absoluteFilePath("music/music1.mp3")
+#     url = QUrl.fromLocalFile(fullpath)
 
-    player.setSource(url)
-    player.mediaStatusChanged.connect(restart_playback)
+#     player.setSource(url)
+#     player.mediaStatusChanged.connect(restart_playback)
 
-    def restart_playback(status):
-        if status == QMediaPlayer.MediaStatus.EndOfMedia:
-            player.setPosition(0)
-            player.play()
+#     def restart_playback(status):
+#         if status == QMediaPlayer.MediaStatus.EndOfMedia:
+#             player.setPosition(0)
+#             player.play()
     
-    player.play()
+#     player.play()
 
 
 def make_sound(window):
@@ -32,7 +32,7 @@ def make_sound(window):
 
     player.mediaStatusChanged.connect(restart_playback)
     
-    fullpath = QDir.current().absoluteFilePath("music/music4.mp3")
+    fullpath = QDir.current().absoluteFilePath("music/music1.mp3")
     url = QUrl.fromLocalFile(fullpath)
 
     player.setSource(url)
