@@ -357,38 +357,67 @@ def print_table(table: QTableWidget):
     start_val = float(bound_start.text())
     end_val = float(bound_end.text())
     step_val = float(step.text())
+
     my_function = function_input.text()
     my_function = my_function.replace("^", "**")
+
     eps_val = float(eps.text())
     mx_cnt_val = int(max_count.text())
-
+    # проверка на то, что функция непрерывна на отрезке
     rc, val =  is_continuous(start_val, end_val, my_function)
-
     if not rc:
         return create_error(f"Ошибка при счёте функции\n в точке {val}", "error in counting result")
 
     x = gen_array_with_step(start_val, end_val, step_val)
     fst_bound = x[0]
     root_num = 0
+
     for snd_bound in x[1::]:
+        # если корень на нужному отрезке, то начинаем запись в таблицу
         if is_root(fst_bound, snd_bound, my_function):
             newton_rc, root, iters = simple_newton_for_bound(my_function, fst_bound, snd_bound, eps_val, mx_cnt_val)
-            rc, f_root = cnt_func(root, my_function)
-            if not rc:
-                return create_error(f"Ошибка при счёте функции\n в точке {val}", "error in counting result")
-  
-            table.insertRow(root_num)
+
+            table.insertRow(root_num)   # вставляем строчку для записи
+            format_table(table)   # форматируем столбцы таблицы
+            # проверка на то, что есть корень и получение значения функции для корня
+            if root != '-':
+                rc, f_root = cnt_func(root, my_function)
+
+                if not rc:
+                    return create_error(f"Ошибка при счёте функции\n при значении аргумента: {root}",
+                                        "error in counting result")
+                
+                f_root = f'{f_root:.1e}'
+                root = f'{root:.6f}'
+            else:
+                f_root = '-'
+            # преобразование границ отрезка
+            str_fst_bound = f'{fst_bound:4.3f}'
+            str_snd_bound = f'{snd_bound:4.3f}'
+            # заполнение текущей строки таблицы
             table.setItem(root_num, 0, QTableWidgetItem(f'{root_num + 1}'))
-            table.setItem(root_num, 1, QTableWidgetItem(f'[{fst_bound:.4}; {snd_bound:.4}]'))
-            table.setItem(root_num, 2, QTableWidgetItem(f'{root:.6}'))
-            table.setItem(root_num, 3, QTableWidgetItem(f'{f_root:.1e}'))
+            table.setItem(root_num, 1, QTableWidgetItem(f'[{str_fst_bound}; {str_snd_bound}]'))
+            table.setItem(root_num, 2, QTableWidgetItem(root))
+            table.setItem(root_num, 3, QTableWidgetItem(f_root))
             table.setItem(root_num, 4, QTableWidgetItem(str(iters)))
             table.setItem(root_num, 5, QTableWidgetItem(str(newton_rc)))
 
             root_num += 1
         fst_bound = snd_bound
+    # если не было найдено корня на отрезке, то выводим уведомление пользователю
     if root_num == 0:
         create_error(f"На отрезке [{start_val:.4}; {end_val:.4}] не было\n обнаружено корней", "not roots")
+
+
+# Делает формат столбцов в таблице
+def format_table(table):
+    header = table.horizontalHeader()
+    header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+    header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+    header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+    header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
+    header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+    header.setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
 
 
 # Вывод графика с проверкой входных данных и результатов функции
@@ -401,15 +430,14 @@ def print_graph(label):
     end_val = float(bound_end.text())
     my_function = str(function_input.text())
     my_function = my_function.replace("^", "**")
-
+    # если функция непрерывна на отрезке
     rc, val =  is_continuous(start_val, end_val, my_function)
-
     if not rc:
         return create_error(f"Ошибка при счёте функции\n в точке {val}", "error in counting result")
-
+    # создание фигуры для графика
     my_figure = Figure(figsize=(6.5, 6.5))
     my_figure.set_facecolor("#947aab")
-
+    # создание окна для работы
     my_subplot = my_figure.add_subplot()
     my_subplot.set_title(f"График функции {str(function_input.text())}\n" +
                  f"на отрезке [{start_val}; {end_val}]")
@@ -419,29 +447,28 @@ def print_graph(label):
 
     my_subplot.xaxis.label.set_fontsize(18)
     my_subplot.yaxis.label.set_fontsize(12)
-
+    # получаем локальные экстремумы
     x_extremes, y_extremes = get_locals_extremes(start_val, end_val, my_function)
+    # получаем корни
     x_roots = get_roots(start_val, end_val, my_function)
 
     x = gen_array(start_val, end_val)
     y = function_output(x, my_function)
-
+    # строим график функции
     my_subplot.plot(x, y, label=f'f(x) = {my_function}')
-
+    # добавляем особые точки для экстремумов и корней
     my_subplot.scatter(x_extremes, y_extremes, color='blue', s=30, label='Найденные локальные экстремумы')
     my_subplot.scatter(x_roots, [0] * len(x_roots), color='red', s=30, label='Найденные корни')
-
-    my_subplot.grid()
-    my_subplot.legend(loc='best', prop={'size': 8})
-
+    
+    my_subplot.grid()   # создаём сетку
+    my_subplot.legend(loc='best', prop={'size': 8})   # создаём легенду
+    
+    # добавляем график в объект QLabel
     canvas = FigureCanvasQTAgg(my_figure)
-
     layout = QVBoxLayout()
-
     layout.deleteLater()
     layout.addWidget(canvas)
     layout.addStretch(1)
-
     label.setLayout(layout)
 
 
@@ -468,7 +495,7 @@ def clear_table():
 def clear_graph():
     my_figure = Figure(figsize=(6.5, 6.5))
     my_figure.set_facecolor("#947aab")
-
+    # для отчистки графика, на его месте делаем пустой график
     my_subplot = my_figure.add_subplot()
     my_subplot.plot([0], [0])
     my_subplot.grid()
@@ -476,7 +503,6 @@ def clear_graph():
     canvas = FigureCanvasQTAgg(my_figure)
 
     layout = QVBoxLayout()
-
     layout.deleteLater()
     layout.addWidget(canvas)
     layout.addStretch(1)

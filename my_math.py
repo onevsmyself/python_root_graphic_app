@@ -42,18 +42,21 @@ def simple_newton_for_bound(my_function, a , b, eps, mx_cnt):
         if not (rc1):
             break
         if f_prime_x0 == 0:
-            return 2, x1, '-'
+            return 2, '-', str(i)
         
         x1 = x0 - fx0 / f_prime_x0
 
         if abs(x1 - x0) < eps:
+            # если корень лежит на начале отрезка, то мы не считаем его корнем,
+            # чтобы не было 2 корней в случае, когда он лежит на границе 
+            # элементарных отрезков
             if abs(x1 - a) < EPS:
-                return 3, x1, str(i)
+                return 3, '-', str(i)
             else:
                 return 0, x1, str(i)
         
         x0 = x1
-    return 1, '0', '-'
+    return 1, '-', '-'
 
 
 # функция, которая возвращает два массива (координаты x, y) для локальных экстремумов функции на отрезке
@@ -69,7 +72,7 @@ def get_locals_extremes(start_val, end_val, my_function):
 
     while cur_val < end_val + step:
         f_x_next = func_x(cur_val + step, my_function)
-
+        # проверка на то, что точка является локальным экстремумом
         if (f_x_prev <= f_x_cur >= f_x_next) or (f_x_prev >= f_x_cur <= f_x_next):
             x_ar_extremes.append(cur_val)
             y_ar_extremes.append(f_x_cur)
@@ -124,7 +127,8 @@ def func_x(x, this_function):
     return eval(compile(this_function, "<string>", 'eval'), builtins, {"x": x})
     
 
-# производная в точке
+# производная в точке, рассчитывается как частное
+# приращения функции к приращению аргумента 
 def f_prime(x, my_function):
     h = 0.0001
     rc1, res1 = cnt_func(x + h, my_function)
