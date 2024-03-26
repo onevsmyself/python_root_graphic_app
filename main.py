@@ -261,7 +261,7 @@ def make_max_count_input():
     max_count_line.setMaxLength(6)
     max_count_line.resize(340, 60)
     max_count_line.move(30, 305)
-    max_count_line.setPlaceholderText("Max count less 10^7")
+    max_count_line.setPlaceholderText("Max count (>= 3)")
     max_count_line.setValidator(QRegularExpressionValidator(
         QRegularExpression(r"[0-9]+")))
 
@@ -619,7 +619,7 @@ def check_iters_cnt():
     try:
         mx_iters_val = int(max_count.text())
 
-        if mx_iters_val < 10:
+        if mx_iters_val < 3:
             return False, 'Сомнительное кол-во операций'
     except ValueError:
         return False, 'Перевод максимального кол-во итераций'
