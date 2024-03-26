@@ -115,7 +115,7 @@ def make_menu():
     info.addAction(about_rc)
 
 
-# для создания окно с информацией о программе
+# для создания окон с информацией о программе и кодами работы
 def make_message_boxes():
     app_info = QMessageBox(window)
     app_info.setWindowTitle("О приложении")   # заголовок
@@ -129,7 +129,11 @@ def make_message_boxes():
                      "экстремумами и корнями.\n\n"
                      "Для вычисления, заданный отрезок делится на элементарные отрезки с заданным шагом. "
                      "Также задаётся максимальное кол-во операций, для которых будут проведены " 
-                     "вычисления.")
+                     "вычисления.\n\n"
+                     "Программа поддерживает следующие функции: "
+                     "'log', 'sin', 'cos', 'exp', 'tan', 'sqrt', 'abs'. "
+                     "А также 'e'.\nФункция записывается без указания 'y', "
+                     "и без разделителей в виде пробелов.\n(x^3+12*x-sin(x))")
 
     code_info = QMessageBox(window)
     code_info.setWindowTitle("Коды работы программы")   # заголовок
@@ -159,7 +163,7 @@ def make_function_input():
     function_input.setFont(QFont("Arial", 28))
     function_input.setAlignment(Qt.AlignmentFlag(4))
 
-    function_input.setMaxLength(33)
+    function_input.setMaxLength(100)
     function_input.setStyleSheet("background-color: rgba(0, 95, 141, 100);" 
                              "border: 1px solid rgba(255, 255, 255, 40);" 
                              "border-radius: 7px;")
@@ -363,7 +367,7 @@ def print_table(table: QTableWidget):
     if not rc:
         return create_error(f"Ошибка при счёте функции\n в точке {val}", "error in counting result")
 
-    x = gen_array(start_val, end_val, step_val)
+    x = gen_array_with_step(start_val, end_val, step_val)
     fst_bound = x[0]
     root_num = 0
     for snd_bound in x[1::]:
@@ -372,9 +376,10 @@ def print_table(table: QTableWidget):
             rc, f_root = cnt_func(root, my_function)
             if not rc:
                 return create_error(f"Ошибка при счёте функции\n в точке {val}", "error in counting result")
+  
             table.insertRow(root_num)
             table.setItem(root_num, 0, QTableWidgetItem(f'{root_num + 1}'))
-            table.setItem(root_num, 1, QTableWidgetItem(f'[{fst_bound:.6}; {snd_bound:.6}]'))
+            table.setItem(root_num, 1, QTableWidgetItem(f'[{fst_bound:.4}; {snd_bound:.4}]'))
             table.setItem(root_num, 2, QTableWidgetItem(f'{root:.6}'))
             table.setItem(root_num, 3, QTableWidgetItem(f'{f_root:.1e}'))
             table.setItem(root_num, 4, QTableWidgetItem(str(iters)))
@@ -394,7 +399,6 @@ def print_graph(label):
     
     start_val = float(bound_start.text())
     end_val = float(bound_end.text())
-    step_val = float(step.text())
     my_function = str(function_input.text())
     my_function = my_function.replace("^", "**")
 
@@ -411,7 +415,7 @@ def print_graph(label):
                  f"на отрезке [{start_val}; {end_val}]")
     my_subplot.set_facecolor("#c2b9c9")
     my_subplot.set_xlabel('Значения x')
-    my_subplot.set_ylabel('Значения y')
+    my_subplot.set_ylabel('Значения f(x)')
 
     my_subplot.xaxis.label.set_fontsize(18)
     my_subplot.yaxis.label.set_fontsize(12)
@@ -419,7 +423,7 @@ def print_graph(label):
     x_extremes, y_extremes = get_locals_extremes(start_val, end_val, my_function)
     x_roots = get_roots(start_val, end_val, my_function)
 
-    x = gen_array(start_val, end_val, step_val)
+    x = gen_array(start_val, end_val)
     y = function_output(x, my_function)
 
     my_subplot.plot(x, y, label=f'f(x) = {my_function}')
@@ -480,14 +484,27 @@ def clear_graph():
     label.setLayout(layout)
 
 
-# разбиение на отрезки по шагу
-def gen_array(start, end, step):
+# разбиение на элементарные отрезки
+def gen_array(start, end):
+    step = (end - start) / 1000
     array = []
-    while start < end:
-        array.append(start)
-        start += step
+    cur_val = start
+    while cur_val < end:
+        array.append(cur_val)
+        cur_val += step
     array.append(end)
     return array 
+
+
+# разбиение на элементарные отрезки по шагу
+def gen_array_with_step(start, end, step):
+    array = []
+    cur_val = start
+    while cur_val < end:
+        array.append(cur_val)
+        cur_val += step
+    array.append(end)
+    return array
 
 
 # Запускает проверку параметром и проверку функции
@@ -508,6 +525,10 @@ def check_data(var):
         is_success, rc = check_iters_cnt()
         if not is_success:
             return False, rc
+        
+        is_success, rc = check_step()
+        if not is_success:
+            return False, rc
     return True, ''
 
 
@@ -517,21 +538,13 @@ def check_params_primary():
         return False, 'Не введено начало отрезка'
     if len(bound_end.text()) == 0:
         return False, 'Не введен конец отрезка'
-    if len(step.text()) == 0:
-        return False, 'Не введен шаг разбиения'
     
     try:
         st_val = float(bound_start.text())
         en_val = float(bound_end.text())
-        step_val = float(step.text())
         
-
         if st_val >= en_val:
             return False, 'Границы отрезка (a >= b)'
-        elif step_val <= 0:
-            return False, 'Шаг разбиения (<=0)'
-        elif (en_val - st_val) < step_val:
-            return False, 'Шаг разбиения больше\nотрезка'
         return True, ''
     
     except ValueError:
@@ -542,7 +555,7 @@ def check_params_primary():
 def check_func_primary():
     my_func = str(function_input.text())
     func_sym = 'x0123456789+-*^/().'
-    func_trig = ['log', 'sin', 'cos', 'exp', 'tan']
+    func_trig = ['log', 'sin', 'cos', 'exp', 'tan', 'e', 'sqrt', 'abs']
 
     if len(my_func) == 0:
         return False, 'Не введена функция'
@@ -568,9 +581,9 @@ def check_eps():
 
         if (en_val - st_val) / 100 <= eps_val:
             return False, 'Погрешность >= 1% от отрезка'
+        return True, ''
     except ValueError:
         return False, 'Перевод погрешности'
-    return True, ''
 
 
 # проверка, введено ли максимальное кол-во итераций для вычисления корней
@@ -586,6 +599,25 @@ def check_iters_cnt():
         return False, 'Перевод максимального кол-во итераций'
     return True, ''
 
+
+# проверка, корректно ли введён шаг разбиения
+def check_step():
+    if len(step.text()) == 0:
+        return False, 'Не введён шаг разбиения'
+    
+    try:
+        step_val = float(step.text())
+        
+        en_val = float(bound_end.text())
+        st_val = float(bound_start.text())
+        if (en_val - st_val) < step_val:
+            return False, 'Шаг разбиения больше\nотрезка'
+        elif step_val <= 0:
+            return False, 'Шаг разбиения (<=0)'
+
+    except ValueError:
+        return False, 'Перевод шага разбиения'
+    return True, ''
 
 # функция для создания ошибки
 def create_error(text, head):
