@@ -13,10 +13,12 @@ def make_sound(window):
 
     player.mediaStatusChanged.connect(restart_playback)
     
-    fullpath = QDir.current().absoluteFilePath("music/music1.mp3")
+    fullpath = QDir.current().absoluteFilePath("music/music4.mp3")
     url = QUrl.fromLocalFile(fullpath)
 
     player.setSource(url)
 
     player.play()
+
+
     
