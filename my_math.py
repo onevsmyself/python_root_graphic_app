@@ -30,28 +30,56 @@ def is_continuous(a, b, func):
     return True, ''
 
 
+# # упрощённый метод Ньютона для нахождения корня
+# def simple_newton_for_bound(my_function, a , b, eps, mx_cnt):
+#     x0 = (a + b) / 2
+#     i = 0
+#     while i < mx_cnt:
+#         i += 1
+#         rc1, fx0 = cnt_func(x0, my_function)
+#         f_prime_x0 = f_prime(x0, my_function)
+#         if not (rc1):
+#             break
+#         if f_prime_x0 == 0:
+#             return 2, '-', str(i)
+#         x1 = x0 - fx0 / f_prime_x0
+#         if abs(x1 - x0) < eps:
+#             # если корень лежит на начале отрезка, то мы не считаем его корнем,
+#             # чтобы не было 2 корней в случае, когда он лежит на границе 
+#             # элементарных отрезков
+#             if abs(x1 - a) < EPS:
+#                 return 3, '-', str(i)
+#             else:
+#                 return 0, x1, str(i)
+#         x0 = x1
+#     return 1, '-', '-'
+
+
 # упрощённый метод Ньютона для нахождения корня
 def simple_newton_for_bound(my_function, a , b, eps, mx_cnt):
-    x0 = (a + b) / 2
+    f_prime_st = f_prime(a, my_function)
+    if f_prime_st == 0:
+        return 2, '-', '-'
+    
     i = 0
+    x0 = (a + b) / 2
     while i < mx_cnt:
         i += 1
         rc1, fx0 = cnt_func(x0, my_function)
-        f_prime_x0 = f_prime(x0, my_function)
 
         if not (rc1):
-            break
-        if f_prime_x0 == 0:
-            return 2, '-', str(i)
+            return 4, '-', '-'
         
-        x1 = x0 - fx0 / f_prime_x0
+        x1 = x0 - fx0 / f_prime_st
 
         if abs(x1 - x0) < eps:
+            if (x1 > b or x1 < a):
+                return 5, x1, str(i)
             # если корень лежит на начале отрезка, то мы не считаем его корнем,
             # чтобы не было 2 корней в случае, когда он лежит на границе 
             # элементарных отрезков
             if abs(x1 - a) < EPS:
-                return 3, '-', str(i)
+                return 3, x1, str(i)
             else:
                 return 0, x1, str(i)
         
@@ -131,7 +159,6 @@ def func_x(x, this_function):
 # приращения функции к приращению аргумента 
 def f_prime(x, my_function):
     h = 0.0001
-    rc1, res1 = cnt_func(x + h, my_function)
-    rc2, res2 = cnt_func(x, my_function)
-    if rc1 and rc2:
-        return (res1 - res2) / h
+    res1 = func_x(x + h, my_function)
+    res2 = func_x(x, my_function)
+    return (res1 - res2) / h

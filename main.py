@@ -25,7 +25,8 @@
 3 - данный корень может быть посчитан, но он лежит на начале элементарного отрезка
 (по моей логике, этот корень должен принадлежать предыдущему элементарному отрезку,
 чтобы не лежать в обоих) (a, b]
-
+4 - возникла ошибка при счёте функции
+5 - при счёте корень вышел из искомого отрезка
 Также программа содержит меню с кнопкой для построения таблицы,
 разными видами очистки, а также информацией о программе и её кодов работы
 при печати таблицы.
@@ -149,7 +150,9 @@ def make_message_boxes():
                       "а она обратилась в ноль). \n"
                       "3 - данный корень может быть посчитан, но он лежит на начале элементарного отрезка "
                       "(по моей логике, этот корень должен принадлежать предыдущему элементарному отрезку, "
-                      "чтобы не лежать в обоих) (a, b].")
+                      "чтобы не лежать в обоих) (a, b].\n"
+                      "4 - возникла ошибка при счёте функции.\n"
+                      "5 - при счёте корня, функция вышли из отрезка.")
 
     return app_info, code_info
 
@@ -372,6 +375,9 @@ def print_table(table: QTableWidget):
     fst_bound = x[0]
     root_num = 0
 
+    # x_roots = []
+    # y_roots = []
+
     for snd_bound in x[1::]:
         # если корень на нужному отрезке, то начинаем запись в таблицу
         if is_root(fst_bound, snd_bound, my_function):
@@ -386,11 +392,15 @@ def print_table(table: QTableWidget):
                 if not rc:
                     return create_error(f"Ошибка при счёте функции\n при значении аргумента: {root}",
                                         "error in counting result")
-                
+                # # получаем корни
+                # y_roots.append(f_root)
+                # x_roots.append(root)
+
                 f_root = f'{f_root:.1e}'
                 root = f'{root:.6f}'
             else:
                 f_root = '-'
+            
             # преобразование границ отрезка
             str_fst_bound = f'{fst_bound:4.3f}'
             str_snd_bound = f'{snd_bound:4.3f}'
@@ -449,8 +459,15 @@ def print_graph(label):
     my_subplot.yaxis.label.set_fontsize(12)
     # получаем локальные экстремумы
     x_extremes, y_extremes = get_locals_extremes(start_val, end_val, my_function)
+
     # получаем корни
-    x_roots = get_roots(start_val, end_val, my_function)
+    # table.setItem(root_num, 0, QTableWidgetItem(f'{root_num + 1}'))
+    # table.setItem(root_num, 1, QTableWidgetItem(f'[{str_fst_bound}; {str_snd_bound}]'))
+    # table.setItem(root_num, 2, QTableWidgetItem(root))
+    # table.setItem(root_num, 3, QTableWidgetItem(f_root))
+    # table.setItem(root_num, 4, QTableWidgetItem(str(iters)))
+    # table.setItem(root_num, 5, QTableWidgetItem(str(newton_rc)))
+    # x_roots = get_roots(start_val, end_val, my_function)
 
     x = gen_array(start_val, end_val)
     y = function_output(x, my_function)
@@ -458,7 +475,7 @@ def print_graph(label):
     my_subplot.plot(x, y, label=f'f(x) = {my_function}')
     # добавляем особые точки для экстремумов и корней
     my_subplot.scatter(x_extremes, y_extremes, color='blue', s=30, label='Найденные локальные экстремумы')
-    my_subplot.scatter(x_roots, [0] * len(x_roots), color='red', s=30, label='Найденные корни')
+    # my_subplot.scatter(x_roots, y_roots, color='red', s=30, label='Найденные корни')
     
     my_subplot.grid()   # создаём сетку
     my_subplot.legend(loc='best', prop={'size': 8})   # создаём легенду
