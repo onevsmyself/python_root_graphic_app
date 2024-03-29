@@ -344,8 +344,6 @@ def make_buttons(window, label):
 def proc_work(table, label):
     if check_data():
         roots_boundaries_list = find_ar_roots()
-        #if len(roots_boundaries_list) != 0:
-        # print(roots_boundaries_list)
         info_matrix, ar_x_roots, ar_y_roots = make_info(roots_boundaries_list)
         print_table(table, info_matrix)
         print_graph(label, ar_x_roots, ar_y_roots)
@@ -381,11 +379,6 @@ def find_ar_roots():
 
     my_function = function_input.text()
     my_function = my_function.replace("^", "**")
-
-    rc, val =  is_continuous(start_val, end_val, my_function)
-    if not rc:
-        create_error(f"Ошибка при счёте функции\n в точке {val}", "error in counting result")
-        return []
 
     x = gen_array_with_step(start_val, end_val, step_val)
     fst_bound = x[0]
