@@ -22,11 +22,8 @@
 2 - невозможность посчитать корень, из-за деления на ноль
 (по формуле упрощённому методу Ньютона нужно делить на производную в точке,
 а она обратилась в ноль)
-3 - данный корень может быть посчитан, но он лежит на начале элементарного отрезка
-(по моей логике, этот корень должен принадлежать предыдущему элементарному отрезку,
-чтобы не лежать в обоих) (a, b]
-4 - возникла ошибка при счёте функции
-5 - при счёте корень вышел из искомого отрезка
+3 - возникла ошибка при счёте функции
+4 - при счёте корень вышел из искомого отрезка
 Также программа содержит меню с кнопкой для построения таблицы,
 разными видами очистки, а также информацией о программе и её кодов работы
 при печати таблицы.
@@ -76,15 +73,12 @@ def make_menu():
                          "stop:1 rgba(23, 194, 185, 255));")
 
     # создание действий, связанных с выводом
-    output_table = QAction("Вывести таблицу", window)
-    output_table.triggered.connect(lambda: print_table(table))
-    output_graph = QAction("Вывести график", window)
-    output_graph.triggered.connect(lambda: print_graph(label))
+    output = QAction("Выполнить программу", window)
+    output.triggered.connect(lambda: proc_work(table, label))
     # их привязка к пункту "Действия"
     actions = bar.addMenu("Действия")
     actions.setFont(QFont("Arial", 20))
-    actions.addAction(output_table)
-    actions.addAction(output_graph)
+    actions.addAction(output)
 
     # создание действия, связанных с отчисткой
     clear_inp = QAction("Отчистить поля ввода", window)
@@ -143,16 +137,16 @@ def make_message_boxes():
     code_info.setIcon(QMessageBox.Icon.Information)   # иконка
     code_info.setStandardButtons(QMessageBox.StandardButton.Close)   # кнопка
     code_info.setText("0 - успешное нахождение корня. \n"
-                      "1 - невозможность посчитать корень, из-за несходимости "
+                      "1 - невозможность посчитать корень, из-за несходимости или особенности "
+                      "упрощённого метода Ньютона, который может вылетать за границу отрезка "
+                      "и отправиться в неизвестном направлении... "
                       "(превышен установленный лимит максимального кол-ва итераций). \n"
                       "2 - невозможность посчитать корень, из-за деления на ноль "
                       "(по формуле упрощённому методу Ньютона нужно делить на производную в точке, "
                       "а она обратилась в ноль). \n"
-                      "3 - данный корень может быть посчитан, но он лежит на начале элементарного отрезка "
-                      "(по моей логике, этот корень должен принадлежать предыдущему элементарному отрезку, "
-                      "чтобы не лежать в обоих) (a, b].\n"
-                      "4 - возникла ошибка при счёте функции.\n"
-                      "5 - при счёте корня, функция вышли из отрезка.")
+                      "3 - возникла ошибка при счёте функции.\n"
+                      "4 - при счёте корня, функция вышли из отрезка. " 
+                      "(Могло произойти из-за выбранного метода).")
 
     return app_info, code_info
 
@@ -336,27 +330,46 @@ def make_table_output():
     return table
 
 
-# Создание кнопок для программы с их связыванием с назначением
+# Создание кнопок для программы и их связыванием с назначением
 def make_buttons(window, label):
-    prn_table = make_button(" Вывести \n таблицу ", window, 25, 385, 200, 70)
-    prn_table.clicked.connect(lambda: print_table(table))
+    process = make_button(" Начать работу ", window, 25, 385, 325, 70)
+    process.clicked.connect(lambda: proc_work(table, label))
 
-    prn_graph = make_button(" Вывести \n график ", window, 250, 385, 200, 70)
-    prn_graph.clicked.connect(lambda: print_graph(label))
-
-    del_data = make_button("Отчистить \n всё ", window, 475, 385, 200, 70)
+    del_data = make_button("Отчистить всё ", window, 375, 385, 300, 70)
     del_data.clicked.connect(clear_all)
 
 
-# Функция для вывода в таблицу строки
-def print_table(table: QTableWidget):
-    is_success, txt = check_data(1)
-    if not is_success:
-        return create_error(f"Ошибка в данных.\n{txt}", "input_error")
+# Функция для работы программы, которая выводит таблицу и график
+# а также проверяет возможность это сделать
+def proc_work(table, label):
+    if check_data():
+        roots_boundaries_list = find_ar_roots()
+        if len(roots_boundaries_list) != 0:
+            ar_x_roots, ar_y_roots = print_table(table, roots_boundaries_list)
+            print_graph(label, ar_x_roots, ar_y_roots)
     
-    if table.rowCount() != 0:
-        table.setRowCount(0)
+
+# Запускает проверку параметром и проверку функции
+def check_data():
+    if not check_boundaries():
+        return False
     
+    if not check_func_primary():
+        return False
+    
+    if not check_step():
+        return False
+    
+    if not check_eps():
+        return False
+    
+    if not check_iters_cnt():
+        return False
+    
+    return True
+
+
+def find_ar_roots():
     start_val = float(bound_start.text())
     end_val = float(bound_end.text())
     step_val = float(step.text())
@@ -364,9 +377,6 @@ def print_table(table: QTableWidget):
     my_function = function_input.text()
     my_function = my_function.replace("^", "**")
 
-    eps_val = float(eps.text())
-    mx_cnt_val = int(max_count.text())
-    # проверка на то, что функция непрерывна на отрезке
     rc, val =  is_continuous(start_val, end_val, my_function)
     if not rc:
         return create_error(f"Ошибка при счёте функции\n в точке {val}", "error in counting result")
@@ -375,48 +385,179 @@ def print_table(table: QTableWidget):
     fst_bound = x[0]
     root_num = 0
 
-    # x_roots = []
-    # y_roots = []
+    roots_boundaries_list = []
 
     for snd_bound in x[1::]:
         # если корень на нужному отрезке, то начинаем запись в таблицу
         if is_root(fst_bound, snd_bound, my_function):
-            newton_rc, root, iters = simple_newton_for_bound(my_function, fst_bound, snd_bound, eps_val, mx_cnt_val)
-
-            table.insertRow(root_num)   # вставляем строчку для записи
-            format_table(table)   # форматируем столбцы таблицы
-            # проверка на то, что есть корень и получение значения функции для корня
-            if root != '-':
-                rc, f_root = cnt_func(root, my_function)
-
-                if not rc:
-                    return create_error(f"Ошибка при счёте функции\n при значении аргумента: {root}",
-                                        "error in counting result")
-                # # получаем корни
-                # y_roots.append(f_root)
-                # x_roots.append(root)
-
-                f_root = f'{f_root:.1e}'
-                root = f'{root:.6f}'
-            else:
-                f_root = '-'
-            
-            # преобразование границ отрезка
-            str_fst_bound = f'{fst_bound:4.3f}'
-            str_snd_bound = f'{snd_bound:4.3f}'
-            # заполнение текущей строки таблицы
-            table.setItem(root_num, 0, QTableWidgetItem(f'{root_num + 1}'))
-            table.setItem(root_num, 1, QTableWidgetItem(f'[{str_fst_bound}; {str_snd_bound}]'))
-            table.setItem(root_num, 2, QTableWidgetItem(root))
-            table.setItem(root_num, 3, QTableWidgetItem(f_root))
-            table.setItem(root_num, 4, QTableWidgetItem(str(iters)))
-            table.setItem(root_num, 5, QTableWidgetItem(str(newton_rc)))
-
+            roots_boundaries_list.append([fst_bound, snd_bound])
             root_num += 1
         fst_bound = snd_bound
+
     # если не было найдено корня на отрезке, то выводим уведомление пользователю
     if root_num == 0:
         create_error(f"На отрезке [{start_val:.4}; {end_val:.4}] не было\n обнаружено корней", "not roots")
+        return []
+
+    return roots_boundaries_list
+
+
+# проверяет, все ли поля заполнены, и верно ли это логически
+def check_boundaries():
+    if len(bound_start.text()) == 0:
+        create_error('Не введено начало отрезка', 'Ошибка границ')
+        return False
+    if len(bound_end.text()) == 0:
+        create_error('Не введен конец отрезка', 'Ошибка границ')
+        return False
+    
+    try:
+        st_val = float(bound_start.text())
+        en_val = float(bound_end.text())
+        
+        if st_val >= en_val:
+            create_error('Границы отрезка (a >= b)', 'Ошибка границ')
+            return False
+        return True
+    
+    except ValueError:
+        create_error('Перевод данных', 'Ошибка границ')
+        return False
+
+
+# делает элементарную проверку на верность введённое функции
+def check_func_primary():
+    my_func = str(function_input.text())
+    func_sym = 'x0123456789+-*^/().'
+    func_trig = ['log', 'sin', 'cos', 'exp', 'tan', 'e', 'sqrt', 'abs']
+
+    if len(my_func) == 0:
+        create_error('Не введена функция', 'Ошибка функции')
+        return False
+    
+    for element in func_trig:
+        my_func = my_func.replace(f"{element}", '')
+    for element in func_sym:
+        my_func = my_func.replace(f"{element}", '')
+
+    if len(my_func) > 0:
+        create_error('Функция неправильна', 'Ошибка функции')
+        return False
+    
+    return True
+
+
+# делает проверку на то, что погрешность измерения хотя бы меньше 1%, чем длина отрезка
+def check_eps():
+    if len(eps.text()) == 0:
+        create_error('Не введена погрешность', 'Ошибка погрешности')
+        return False
+    try:
+        eps_val = float(eps.text())
+        st_val = float(bound_start.text())
+        en_val = float(bound_end.text())
+
+        if (en_val - st_val) / 100 <= eps_val:
+            create_error('Погрешность >= 1% от отрезка', 'Ошибка погрешности')
+            return False
+        return True, ''
+    except ValueError:
+        create_error('Перевод погрешности', 'Ошибка погрешности')
+        return False
+
+
+# проверка, введено ли максимальное кол-во итераций для вычисления корней
+def check_iters_cnt():
+    if len(max_count.text()) == 0:
+        create_error('Не введено макс. кол-во итераций', 'Ошибка итераций')
+        return False
+    try:
+        mx_iters_val = int(max_count.text())
+
+        if mx_iters_val < 3:
+            create_error('Сомнительное кол-во операций', 'Ошибка итераций')
+            return False
+    except ValueError:
+        create_error('Перевод максимального кол-во итераций', 'Ошибка итераций')
+        return False
+    return True, ''
+
+
+# проверка, корректно ли введён шаг разбиения
+def check_step():
+    if len(step.text()) == 0:
+        create_error('Не введён шаг разбиения', 'Ошибка шага')
+        return False
+    
+    try:
+        step_val = float(step.text())
+        
+        en_val = float(bound_end.text())
+        st_val = float(bound_start.text())
+        if (en_val - st_val) < step_val:
+            create_error('Шаг разбиения больше\nотрезка', 'Ошибка шага')
+            return False
+        elif step_val <= 0:
+            create_error('Шаг разбиения (<=0)', 'Ошибка шага')
+            return False
+
+    except ValueError:
+        create_error('Перевод шага разбиения', 'Ошибка шага')
+        return False
+    return True, ''
+
+
+def print_table(table, roots_boundaries_list):
+    
+    if table.rowCount() != 0:
+        table.setRowCount(0)
+
+    my_function = function_input.text()
+    my_function = my_function.replace("^", "**")
+    eps_val = float(eps.text())
+    mx_cnt_val = int(max_count.text())
+    
+    root_num = 0
+
+    ar_x_roots = []
+    ar_y_roots = []
+
+    for boundary in roots_boundaries_list:
+        fst_bound = boundary[0]
+        snd_bound = boundary[1]
+        newton_rc, root, iters = simple_newton_for_bound(my_function, fst_bound, snd_bound, eps_val, mx_cnt_val)
+
+        table.insertRow(root_num)   # вставляем строчку для записи
+        format_table(table)   # форматируем столбцы таблицы
+
+        # проверка на то, что есть корень и получение значения функции для корня
+        if root != '-':
+            rc, f_root = cnt_func(root, my_function)
+
+            if not rc:
+                return create_error(f"Ошибка при счёте функции\n при значении аргумента: {root}",
+                                    "error in counting result")
+
+            f_root = f'{f_root:.1e}'
+            root = f'{root:.5f}'
+            ar_x_roots.append(float(root))
+            ar_y_roots.append(float(f_root))
+        else:
+            f_root = '-'
+        
+        # преобразование границ отрезка
+        str_fst_bound = f'{fst_bound:4.3f}'
+        str_snd_bound = f'{snd_bound:4.3f}'
+        # заполнение текущей строки таблицы
+        table.setItem(root_num, 0, QTableWidgetItem(f'{root_num + 1}'))
+        table.setItem(root_num, 1, QTableWidgetItem(f'[{str_fst_bound}; {str_snd_bound}]'))
+        table.setItem(root_num, 2, QTableWidgetItem(root))
+        table.setItem(root_num, 3, QTableWidgetItem(f_root))
+        table.setItem(root_num, 4, QTableWidgetItem(str(iters)))
+        table.setItem(root_num, 5, QTableWidgetItem(str(newton_rc)))
+
+        root_num += 1
+    return ar_x_roots, ar_y_roots
 
 
 # Делает формат столбцов в таблице
@@ -431,19 +572,12 @@ def format_table(table):
 
 
 # Вывод графика с проверкой входных данных и результатов функции
-def print_graph(label):
-    is_success, txt = check_data(0)
-    if not is_success:
-        return create_error(f"Ошибка в данных.\n{txt}", "input_error")
-    
+def print_graph(label, ar_x_roots, ar_y_roots): 
     start_val = float(bound_start.text())
     end_val = float(bound_end.text())
     my_function = str(function_input.text())
     my_function = my_function.replace("^", "**")
-    # если функция непрерывна на отрезке
-    rc, val =  is_continuous(start_val, end_val, my_function)
-    if not rc:
-        return create_error(f"Ошибка при счёте функции\n в точке {val}", "error in counting result")
+
     # создание фигуры для графика
     my_figure = Figure(figsize=(6.5, 6.5))
     my_figure.set_facecolor("#947aab")
@@ -457,25 +591,18 @@ def print_graph(label):
 
     my_subplot.xaxis.label.set_fontsize(18)
     my_subplot.yaxis.label.set_fontsize(12)
+
     # получаем локальные экстремумы
     x_extremes, y_extremes = get_locals_extremes(start_val, end_val, my_function)
-
-    # получаем корни
-    # table.setItem(root_num, 0, QTableWidgetItem(f'{root_num + 1}'))
-    # table.setItem(root_num, 1, QTableWidgetItem(f'[{str_fst_bound}; {str_snd_bound}]'))
-    # table.setItem(root_num, 2, QTableWidgetItem(root))
-    # table.setItem(root_num, 3, QTableWidgetItem(f_root))
-    # table.setItem(root_num, 4, QTableWidgetItem(str(iters)))
-    # table.setItem(root_num, 5, QTableWidgetItem(str(newton_rc)))
-    # x_roots = get_roots(start_val, end_val, my_function)
 
     x = gen_array(start_val, end_val)
     y = function_output(x, my_function)
     # строим график функции
     my_subplot.plot(x, y, label=f'f(x) = {my_function}')
+
     # добавляем особые точки для экстремумов и корней
     my_subplot.scatter(x_extremes, y_extremes, color='blue', s=30, label='Найденные локальные экстремумы')
-    # my_subplot.scatter(x_roots, y_roots, color='red', s=30, label='Найденные корни')
+    my_subplot.scatter(ar_x_roots, ar_y_roots, color='red', s=30, label='Найденные корни')
     
     my_subplot.grid()   # создаём сетку
     my_subplot.legend(loc='best', prop={'size': 8})   # создаём легенду
@@ -549,118 +676,6 @@ def gen_array_with_step(start, end, step):
     array.append(end)
     return array
 
-
-# Запускает проверку параметром и проверку функции
-def check_data(var):
-    is_success, rc =  check_params_primary()
-    if not is_success:
-        return False, rc
-    
-    is_success, rc =  check_func_primary()
-    if not is_success:
-        return False, rc
-    
-    if var == 1:
-        is_success, rc =  check_eps()
-        if not is_success:
-            return False, rc
-        
-        is_success, rc = check_iters_cnt()
-        if not is_success:
-            return False, rc
-        
-        is_success, rc = check_step()
-        if not is_success:
-            return False, rc
-    return True, ''
-
-
-# проверяет, все ли поля заполнены, и верно ли это логически
-def check_params_primary():
-    if len(bound_start.text()) == 0:
-        return False, 'Не введено начало отрезка'
-    if len(bound_end.text()) == 0:
-        return False, 'Не введен конец отрезка'
-    
-    try:
-        st_val = float(bound_start.text())
-        en_val = float(bound_end.text())
-        
-        if st_val >= en_val:
-            return False, 'Границы отрезка (a >= b)'
-        return True, ''
-    
-    except ValueError:
-        return False, 'Перевод данных'
-
-
-# делает элементарную проверку на верность введённое функции
-def check_func_primary():
-    my_func = str(function_input.text())
-    func_sym = 'x0123456789+-*^/().'
-    func_trig = ['log', 'sin', 'cos', 'exp', 'tan', 'e', 'sqrt', 'abs']
-
-    if len(my_func) == 0:
-        return False, 'Не введена функция'
-    for element in func_trig:
-        my_func = my_func.replace(f"{element}", '')
-    for element in func_sym:
-        my_func = my_func.replace(f"{element}", '')
-
-    if len(my_func) > 0:
-        return False, 'Функция неправильна'
-    
-    return True, ''
-
-
-# делает проверку на то, что погрешность измерения хотя бы меньше 1%, чем длина отрезка
-def check_eps():
-    if len(eps.text()) == 0:
-        return False, 'Не введена погрешность' 
-    try:
-        eps_val = float(eps.text())
-        st_val = float(bound_start.text())
-        en_val = float(bound_end.text())
-
-        if (en_val - st_val) / 100 <= eps_val:
-            return False, 'Погрешность >= 1% от отрезка'
-        return True, ''
-    except ValueError:
-        return False, 'Перевод погрешности'
-
-
-# проверка, введено ли максимальное кол-во итераций для вычисления корней
-def check_iters_cnt():
-    if len(max_count.text()) == 0:
-        return False, 'Не введено макс. кол-во итераций'
-    try:
-        mx_iters_val = int(max_count.text())
-
-        if mx_iters_val < 3:
-            return False, 'Сомнительное кол-во операций'
-    except ValueError:
-        return False, 'Перевод максимального кол-во итераций'
-    return True, ''
-
-
-# проверка, корректно ли введён шаг разбиения
-def check_step():
-    if len(step.text()) == 0:
-        return False, 'Не введён шаг разбиения'
-    
-    try:
-        step_val = float(step.text())
-        
-        en_val = float(bound_end.text())
-        st_val = float(bound_start.text())
-        if (en_val - st_val) < step_val:
-            return False, 'Шаг разбиения больше\nотрезка'
-        elif step_val <= 0:
-            return False, 'Шаг разбиения (<=0)'
-
-    except ValueError:
-        return False, 'Перевод шага разбиения'
-    return True, ''
 
 # функция для создания ошибки
 def create_error(text, head):

@@ -30,33 +30,9 @@ def is_continuous(a, b, func):
     return True, ''
 
 
-# # упрощённый метод Ньютона для нахождения корня
-# def simple_newton_for_bound(my_function, a , b, eps, mx_cnt):
-#     x0 = (a + b) / 2
-#     i = 0
-#     while i < mx_cnt:
-#         i += 1
-#         rc1, fx0 = cnt_func(x0, my_function)
-#         f_prime_x0 = f_prime(x0, my_function)
-#         if not (rc1):
-#             break
-#         if f_prime_x0 == 0:
-#             return 2, '-', str(i)
-#         x1 = x0 - fx0 / f_prime_x0
-#         if abs(x1 - x0) < eps:
-#             # если корень лежит на начале отрезка, то мы не считаем его корнем,
-#             # чтобы не было 2 корней в случае, когда он лежит на границе 
-#             # элементарных отрезков
-#             if abs(x1 - a) < EPS:
-#                 return 3, '-', str(i)
-#             else:
-#                 return 0, x1, str(i)
-#         x0 = x1
-#     return 1, '-', '-'
-
-
 # упрощённый метод Ньютона для нахождения корня
 def simple_newton_for_bound(my_function, a , b, eps, mx_cnt):
+    print('in')
     f_prime_st = f_prime(a, my_function)
     if f_prime_st == 0:
         return 2, '-', '-'
@@ -68,22 +44,18 @@ def simple_newton_for_bound(my_function, a , b, eps, mx_cnt):
         rc1, fx0 = cnt_func(x0, my_function)
 
         if not (rc1):
-            return 4, '-', '-'
+            return 3, '-', '-'   # ошибка при счёты функции
         
         x1 = x0 - fx0 / f_prime_st
-
-        if abs(x1 - x0) < eps:
-            if (x1 > b or x1 < a):
-                return 5, x1, str(i)
-            # если корень лежит на начале отрезка, то мы не считаем его корнем,
-            # чтобы не было 2 корней в случае, когда он лежит на границе 
-            # элементарных отрезков
-            if abs(x1 - a) < EPS:
-                return 3, x1, str(i)
-            else:
+        print(f"past: {x0}, new: {x1}")
+        if abs(x1 - x0) < eps:   # если достигли заданной точности
+            if x1 - eps < b and x1 + eps > a:   # если корень лежит в погрешности отрезка
                 return 0, x1, str(i)
-        
+            else:   # если корень лежит за отрезком
+                return 4, x1, str(i)
+
         x0 = x1
+    # если не нашли корень за данное кол-во операций
     return 1, '-', '-'
 
 
