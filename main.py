@@ -166,8 +166,6 @@ def make_function_input():
                              "border-radius: 7px;")
                              #"color: white;")
     function_input.setPlaceholderText("Ваша функция (a*x+x^b+x**c)")
-    # function_input.setValidator(QRegularExpressionValidator(
-    #     QRegularExpression(r'^((sin|cos|tan|cot|sec|csc|exp|log|sqrt)\s*\(\s*((-?\d+(\.\d+)?)|x)\s*\))$')))#r"^[0-9x*^/.()+-]+$"
 
     return function_input
 
@@ -239,7 +237,8 @@ def make_step_input():
 
 # Делаем строку для ввода количества операций
 def make_max_count_input():
-    # Создаём прозрачный текст для интерфейса с указанием на максимальное кол-во итераций
+    # Создаём прозрачный текст для интерфейса
+    # с указанием на максимальное кол-во итераций
     label = QLabel("Макс. кол-во итераций", window)
     label.setStyleSheet(u"color: white;\n"
                         "font-size: 22pt;\n"
@@ -325,7 +324,8 @@ def make_table_output():
     header.setStyleSheet("background-color: lightblue; color: black;")
     header.setFont(QFont("Ariel", 16))
 
-    table.setHorizontalHeaderLabels(["№ Корня", '[xi; x(i+1)]', 'x`', 'f(x`)', 'Итерации', 'Код работы'])
+    table.setHorizontalHeaderLabels(["№ Корня", '[xi; x(i+1)]', 'x`',
+                                    'f(x`)', 'Итерации', 'Код работы'])
 
     return table
 
@@ -344,9 +344,11 @@ def make_buttons(window, label):
 def proc_work(table, label):
     if check_data():
         roots_boundaries_list = find_ar_roots()
-        if len(roots_boundaries_list) != 0:
-            ar_x_roots, ar_y_roots = print_table(table, roots_boundaries_list)
-            print_graph(label, ar_x_roots, ar_y_roots)
+        #if len(roots_boundaries_list) != 0:
+        # print(roots_boundaries_list)
+        info_matrix, ar_x_roots, ar_y_roots = make_info(roots_boundaries_list)
+        print_table(table, info_matrix)
+        print_graph(label, ar_x_roots, ar_y_roots)
     
 
 # Запускает проверку параметром и проверку функции
@@ -366,9 +368,12 @@ def check_data():
     if not check_iters_cnt():
         return False
     
+    if not check_continuous():
+        return False
     return True
 
 
+# находит отрезки, в которых лежит корень
 def find_ar_roots():
     start_val = float(bound_start.text())
     end_val = float(bound_end.text())
@@ -379,7 +384,8 @@ def find_ar_roots():
 
     rc, val =  is_continuous(start_val, end_val, my_function)
     if not rc:
-        return create_error(f"Ошибка при счёте функции\n в точке {val}", "error in counting result")
+        create_error(f"Ошибка при счёте функции\n в точке {val}", "error in counting result")
+        return []
 
     x = gen_array_with_step(start_val, end_val, step_val)
     fst_bound = x[0]
@@ -394,12 +400,130 @@ def find_ar_roots():
             root_num += 1
         fst_bound = snd_bound
 
-    # если не было найдено корня на отрезке, то выводим уведомление пользователю
-    if root_num == 0:
-        create_error(f"На отрезке [{start_val:.4}; {end_val:.4}] не было\n обнаружено корней", "not roots")
-        return []
-
     return roots_boundaries_list
+
+
+# на основе отрезков, в которой лежит корень сделать дополнительную информацию
+# для печати таблицы и графика
+def make_info(roots_boundaries_list):
+    matrix = []
+
+    my_function = function_input.text()
+    my_function = my_function.replace("^", "**")
+    eps_val = float(eps.text())
+    mx_cnt_val = int(max_count.text())
+    
+    root_num = 0
+
+    ar_x_roots = []
+    ar_y_roots = []
+
+    for boundary in roots_boundaries_list:
+        fst_bound = boundary[0]
+        snd_bound = boundary[1]
+        newton_rc, root, iters = simple_newton_for_bound(my_function, fst_bound, snd_bound, eps_val, mx_cnt_val)
+        # проверка на то, что есть корень и получение значения функции для корня
+        if root != '-':
+            rc, f_root = cnt_func(root, my_function)
+
+            if not rc:
+                f_root = '-'
+            else:
+                f_root = f'{f_root:.1e}'
+
+            root = f'{root:.5f}'
+            ar_x_roots.append(float(root))
+            ar_y_roots.append(float(f_root))
+        else:
+            f_root = '-'
+        
+        # преобразование границ отрезка
+        str_fst_bound = f'{fst_bound:4.3f}'
+        str_snd_bound = f'{snd_bound:4.3f}'
+        # заполнение матрицы
+        matrix.append([f'{root_num + 1}', f'[{str_fst_bound}; {str_snd_bound}]', root, f_root,
+                       str(iters), str(newton_rc)])
+
+        root_num += 1
+    return matrix, ar_x_roots, ar_y_roots
+
+
+# Заполняет таблицу данными
+def print_table(table, matrix):
+    
+    if table.rowCount() != 0:
+        table.setRowCount(0)
+
+    index = 0
+
+    for arr_info in matrix:
+        table.insertRow(index)   # вставляем строчку для записи
+        format_table(table)   # форматируем столбцы таблицы
+
+        # заполнение текущей строки таблицы
+        table.setItem(index, 0, QTableWidgetItem(arr_info[0]))
+        table.setItem(index, 1, QTableWidgetItem(arr_info[1]))
+        table.setItem(index, 2, QTableWidgetItem(arr_info[2]))
+        table.setItem(index, 3, QTableWidgetItem(arr_info[3]))
+        table.setItem(index, 4, QTableWidgetItem(arr_info[4]))
+        table.setItem(index, 5, QTableWidgetItem(arr_info[5]))
+        index += 1
+
+
+# Делает формат столбцов в таблице
+def format_table(table):
+    header = table.horizontalHeader()
+    header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+    header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+    header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+    header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
+    header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+    header.setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
+
+
+# Вывод графика с проверкой входных данных и результатов функции
+def print_graph(label, ar_x_roots, ar_y_roots): 
+    start_val = float(bound_start.text())
+    end_val = float(bound_end.text())
+    my_function = str(function_input.text())
+    my_function = my_function.replace("^", "**")
+
+    # создание фигуры для графика
+    my_figure = Figure(figsize=(6.5, 6.5))
+    my_figure.set_facecolor("#947aab")
+    # создание окна для работы
+    my_subplot = my_figure.add_subplot()
+    my_subplot.set_title(f"График функции {str(function_input.text())}\n" +
+                 f"на отрезке [{start_val}; {end_val}]")
+    my_subplot.set_facecolor("#c2b9c9")
+    my_subplot.set_xlabel('Значения x')
+    my_subplot.set_ylabel('Значения f(x)')
+
+    my_subplot.xaxis.label.set_fontsize(18)
+    my_subplot.yaxis.label.set_fontsize(12)
+
+    # получаем локальные экстремумы
+    x_extremes, y_extremes = get_locals_extremes(start_val, end_val, my_function)
+
+    x = gen_array(start_val, end_val)
+    y = function_output(x, my_function)
+    # строим график функции
+    my_subplot.plot(x, y, label=f'f(x) = {my_function}')
+
+    # добавляем особые точки для экстремумов и корней
+    my_subplot.scatter(x_extremes, y_extremes, color='blue', s=30, label='Найденные локальные экстремумы')
+    my_subplot.scatter(ar_x_roots, ar_y_roots, color='red', s=30, label='Найденные корни')
+    
+    my_subplot.grid()   # создаём сетку
+    my_subplot.legend(loc='best', prop={'size': 8})   # создаём легенду
+    
+    # добавляем график в объект QLabel
+    canvas = FigureCanvasQTAgg(my_figure)
+    layout = QVBoxLayout()
+    layout.deleteLater()
+    layout.addWidget(canvas)
+    layout.addStretch(1)
+    label.setLayout(layout)
 
 
 # проверяет, все ли поля заполнены, и верно ли это логически
@@ -507,113 +631,16 @@ def check_step():
     return True, ''
 
 
-def print_table(table, roots_boundaries_list):
-    
-    if table.rowCount() != 0:
-        table.setRowCount(0)
-
-    my_function = function_input.text()
-    my_function = my_function.replace("^", "**")
-    eps_val = float(eps.text())
-    mx_cnt_val = int(max_count.text())
-    
-    root_num = 0
-
-    ar_x_roots = []
-    ar_y_roots = []
-
-    for boundary in roots_boundaries_list:
-        fst_bound = boundary[0]
-        snd_bound = boundary[1]
-        newton_rc, root, iters = simple_newton_for_bound(my_function, fst_bound, snd_bound, eps_val, mx_cnt_val)
-
-        table.insertRow(root_num)   # вставляем строчку для записи
-        format_table(table)   # форматируем столбцы таблицы
-
-        # проверка на то, что есть корень и получение значения функции для корня
-        if root != '-':
-            rc, f_root = cnt_func(root, my_function)
-
-            if not rc:
-                return create_error(f"Ошибка при счёте функции\n при значении аргумента: {root}",
-                                    "error in counting result")
-
-            f_root = f'{f_root:.1e}'
-            root = f'{root:.5f}'
-            ar_x_roots.append(float(root))
-            ar_y_roots.append(float(f_root))
-        else:
-            f_root = '-'
-        
-        # преобразование границ отрезка
-        str_fst_bound = f'{fst_bound:4.3f}'
-        str_snd_bound = f'{snd_bound:4.3f}'
-        # заполнение текущей строки таблицы
-        table.setItem(root_num, 0, QTableWidgetItem(f'{root_num + 1}'))
-        table.setItem(root_num, 1, QTableWidgetItem(f'[{str_fst_bound}; {str_snd_bound}]'))
-        table.setItem(root_num, 2, QTableWidgetItem(root))
-        table.setItem(root_num, 3, QTableWidgetItem(f_root))
-        table.setItem(root_num, 4, QTableWidgetItem(str(iters)))
-        table.setItem(root_num, 5, QTableWidgetItem(str(newton_rc)))
-
-        root_num += 1
-    return ar_x_roots, ar_y_roots
-
-
-# Делает формат столбцов в таблице
-def format_table(table):
-    header = table.horizontalHeader()
-    header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-    header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-    header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-    header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
-    header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
-    header.setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
-
-
-# Вывод графика с проверкой входных данных и результатов функции
-def print_graph(label, ar_x_roots, ar_y_roots): 
-    start_val = float(bound_start.text())
-    end_val = float(bound_end.text())
-    my_function = str(function_input.text())
-    my_function = my_function.replace("^", "**")
-
-    # создание фигуры для графика
-    my_figure = Figure(figsize=(6.5, 6.5))
-    my_figure.set_facecolor("#947aab")
-    # создание окна для работы
-    my_subplot = my_figure.add_subplot()
-    my_subplot.set_title(f"График функции {str(function_input.text())}\n" +
-                 f"на отрезке [{start_val}; {end_val}]")
-    my_subplot.set_facecolor("#c2b9c9")
-    my_subplot.set_xlabel('Значения x')
-    my_subplot.set_ylabel('Значения f(x)')
-
-    my_subplot.xaxis.label.set_fontsize(18)
-    my_subplot.yaxis.label.set_fontsize(12)
-
-    # получаем локальные экстремумы
-    x_extremes, y_extremes = get_locals_extremes(start_val, end_val, my_function)
-
-    x = gen_array(start_val, end_val)
-    y = function_output(x, my_function)
-    # строим график функции
-    my_subplot.plot(x, y, label=f'f(x) = {my_function}')
-
-    # добавляем особые точки для экстремумов и корней
-    my_subplot.scatter(x_extremes, y_extremes, color='blue', s=30, label='Найденные локальные экстремумы')
-    my_subplot.scatter(ar_x_roots, ar_y_roots, color='red', s=30, label='Найденные корни')
-    
-    my_subplot.grid()   # создаём сетку
-    my_subplot.legend(loc='best', prop={'size': 8})   # создаём легенду
-    
-    # добавляем график в объект QLabel
-    canvas = FigureCanvasQTAgg(my_figure)
-    layout = QVBoxLayout()
-    layout.deleteLater()
-    layout.addWidget(canvas)
-    layout.addStretch(1)
-    label.setLayout(layout)
+def check_continuous():
+    st = float(bound_start.text())
+    en = float(bound_end.text())
+    f = function_input.text()
+    f = f.replace("^", "**")
+    rc, val =  is_continuous(st, en, f)
+    if not rc:
+        create_error(f"Функция не может быть \nпосчитана в точке {val}", "Ошибка счёта")
+        return False
+    return True
 
 
 # Функция, которая отчищает всё

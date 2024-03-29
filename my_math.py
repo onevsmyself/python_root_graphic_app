@@ -19,7 +19,6 @@ def is_continuous(a, b, func):
         try:
             rc1, f1 = cnt_func(x/1000, func)
             rc2, f2 = cnt_func((x + step)/1000, func)
-        
             if rc1 and rc2:
                 if abs(f1 - f2) > 100:
                     return False, x/1000
@@ -32,7 +31,6 @@ def is_continuous(a, b, func):
 
 # упрощённый метод Ньютона для нахождения корня
 def simple_newton_for_bound(my_function, a , b, eps, mx_cnt):
-    print('in')
     f_prime_st = f_prime(a, my_function)
     if f_prime_st == 0:
         return 2, '-', '-'
@@ -47,7 +45,6 @@ def simple_newton_for_bound(my_function, a , b, eps, mx_cnt):
             return 3, '-', '-'   # ошибка при счёты функции
         
         x1 = x0 - fx0 / f_prime_st
-        print(f"past: {x0}, new: {x1}")
         if abs(x1 - x0) < eps:   # если достигли заданной точности
             if x1 - eps < b and x1 + eps > a:   # если корень лежит в погрешности отрезка
                 return 0, x1, str(i)
@@ -107,7 +104,6 @@ def get_roots(start_val, end_val, my_function):
 def is_root(a, b, func):
     f1 = func_x(a, func)
     f2 = func_x(b, func)
-
     if f1 * f2 <= 0:
         return True
     return False
