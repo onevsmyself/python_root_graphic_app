@@ -307,7 +307,6 @@ def make_button(text, window, x, y, width, height):
 
 # Создание таблицы для дальнейшего вывода корней
 def make_table_output():
-
     table = QTableWidget(window)
     table.setFont(QFont("Ariel", 12))
     table.setStyleSheet("background-color: rgba(255, 255, 255, 30);"
@@ -342,44 +341,54 @@ def make_buttons(window, label):
 # Функция для работы программы, которая выводит таблицу и график
 # а также проверяет возможность это сделать
 def proc_work(table, label):
-    if check_data():
-        roots_boundaries_list = find_ar_roots()
-        info_matrix, ar_x_roots, ar_y_roots = make_info(roots_boundaries_list)
+    my_start = bound_start.text()
+    my_end = bound_end.text()
+    my_step = step.text()
+    my_eps = eps.text()
+    my_mx_cnt = max_count.text()
+    my_function = function_input.text()
+
+    if check_data(my_start, my_end, my_step, my_eps, my_mx_cnt, my_function):
+        start_val = float(my_start)
+        end_val = float(my_end)
+        step_val = float(my_step)
+        eps_val = float(my_eps)
+        mx_cnt_val = int(my_mx_cnt)
+        my_function = my_function.replace("^", "**")
+
+        roots_boundaries_list = find_ar_roots(start_val, end_val, step_val, my_function)
+        info_matrix, ar_x_roots, ar_y_roots = make_info(roots_boundaries_list, my_function, eps_val, mx_cnt_val)
+        x_extremes, y_extremes = get_locals_extremes(start_val, end_val, my_function)
+
         print_table(table, info_matrix)
-        print_graph(label, ar_x_roots, ar_y_roots)
+        print_graph(label, ar_x_roots, ar_y_roots, start_val, end_val, my_function, x_extremes, y_extremes)
     
 
 # Запускает проверку параметром и проверку функции
-def check_data():
-    if not check_boundaries():
+def check_data(my_start, my_end, my_step, my_eps, my_mx_cnt, my_function):
+    if not check_boundaries(my_start, my_end):
+        return False
+
+    if not check_func_primary(my_function):
+        return False
+
+    if not check_step(float(my_start), float(my_end), my_step):
         return False
     
-    if not check_func_primary():
+    if not check_eps(float(my_start), float(my_end), my_eps):
         return False
-    
-    if not check_step():
+
+    if not check_iters_cnt(my_mx_cnt):
         return False
-    
-    if not check_eps():
+
+    if not check_continuous(float(my_start), float(my_end), my_function):
         return False
-    
-    if not check_iters_cnt():
-        return False
-    
-    if not check_continuous():
-        return False
+
     return True
 
 
 # находит отрезки, в которых лежит корень
-def find_ar_roots():
-    start_val = float(bound_start.text())
-    end_val = float(bound_end.text())
-    step_val = float(step.text())
-
-    my_function = function_input.text()
-    my_function = my_function.replace("^", "**")
-
+def find_ar_roots(start_val, end_val, step_val, my_function):
     x = gen_array_with_step(start_val, end_val, step_val)
     fst_bound = x[0]
     root_num = 0
@@ -398,14 +407,8 @@ def find_ar_roots():
 
 # на основе отрезков, в которой лежит корень сделать дополнительную информацию
 # для печати таблицы и графика
-def make_info(roots_boundaries_list):
-    matrix = []
-
-    my_function = function_input.text()
-    my_function = my_function.replace("^", "**")
-    eps_val = float(eps.text())
-    mx_cnt_val = int(max_count.text())
-    
+def make_info(roots_boundaries_list, my_function, eps_val, mx_cnt_val):
+    matrix = []    
     root_num = 0
 
     ar_x_roots = []
@@ -415,7 +418,8 @@ def make_info(roots_boundaries_list):
         fst_bound = boundary[0]
         snd_bound = boundary[1]
         newton_rc, root, iters = simple_newton_for_bound(my_function, fst_bound, snd_bound, eps_val, mx_cnt_val)
-        # проверка на то, что есть корень и получение значения функции для корня
+        # проверка на то, что есть корень
+        # получение значения функции для корня
         if root != '-':
             rc, f_root = cnt_func(root, my_function)
 
@@ -443,7 +447,6 @@ def make_info(roots_boundaries_list):
 
 # Заполняет таблицу данными
 def print_table(table, matrix):
-    
     if table.rowCount() != 0:
         table.setRowCount(0)
 
@@ -475,18 +478,13 @@ def format_table(table):
 
 
 # Вывод графика с проверкой входных данных и результатов функции
-def print_graph(label, ar_x_roots, ar_y_roots): 
-    start_val = float(bound_start.text())
-    end_val = float(bound_end.text())
-    my_function = str(function_input.text())
-    my_function = my_function.replace("^", "**")
-
+def print_graph(label, ar_x_roots, ar_y_roots, start_val, end_val, my_function, x_extremes, y_extremes): 
     # создание фигуры для графика
     my_figure = Figure(figsize=(6.5, 6.5))
     my_figure.set_facecolor("#947aab")
     # создание окна для работы
     my_subplot = my_figure.add_subplot()
-    my_subplot.set_title(f"График функции {str(function_input.text())}\n" +
+    my_subplot.set_title(f"График функции {my_function}\n" +
                  f"на отрезке [{start_val}; {end_val}]")
     my_subplot.set_facecolor("#c2b9c9")
     my_subplot.set_xlabel('Значения x')
@@ -494,9 +492,6 @@ def print_graph(label, ar_x_roots, ar_y_roots):
 
     my_subplot.xaxis.label.set_fontsize(18)
     my_subplot.yaxis.label.set_fontsize(12)
-
-    # получаем локальные экстремумы
-    x_extremes, y_extremes = get_locals_extremes(start_val, end_val, my_function)
 
     x = gen_array(start_val, end_val)
     y = function_output(x, my_function)
@@ -520,17 +515,17 @@ def print_graph(label, ar_x_roots, ar_y_roots):
 
 
 # проверяет, все ли поля заполнены, и верно ли это логически
-def check_boundaries():
-    if len(bound_start.text()) == 0:
+def check_boundaries(start_text, end_text):
+    if len(start_text) == 0:
         create_error('Не введено начало отрезка', 'Ошибка границ')
         return False
-    if len(bound_end.text()) == 0:
+    if len(end_text) == 0:
         create_error('Не введен конец отрезка', 'Ошибка границ')
         return False
     
     try:
-        st_val = float(bound_start.text())
-        en_val = float(bound_end.text())
+        st_val = float(start_text)
+        en_val = float(end_text)
         
         if st_val >= en_val:
             create_error('Границы отрезка (a >= b)', 'Ошибка границ')
@@ -543,8 +538,8 @@ def check_boundaries():
 
 
 # делает элементарную проверку на верность введённое функции
-def check_func_primary():
-    my_func = str(function_input.text())
+def check_func_primary(func):
+    my_func = str(func)
     func_sym = 'x0123456789+-*^/().'
     func_trig = ['log', 'sin', 'cos', 'exp', 'tan', 'e', 'sqrt', 'abs']
 
@@ -565,14 +560,12 @@ def check_func_primary():
 
 
 # делает проверку на то, что погрешность измерения хотя бы меньше 1%, чем длина отрезка
-def check_eps():
-    if len(eps.text()) == 0:
+def check_eps(st_val, en_val, eps_text):
+    if len(eps_text) == 0:
         create_error('Не введена погрешность', 'Ошибка погрешности')
         return False
     try:
-        eps_val = float(eps.text())
-        st_val = float(bound_start.text())
-        en_val = float(bound_end.text())
+        eps_val = float(eps_text)
 
         if (en_val - st_val) / 100 <= eps_val:
             create_error('Погрешность >= 1% от отрезка', 'Ошибка погрешности')
@@ -584,33 +577,31 @@ def check_eps():
 
 
 # проверка, введено ли максимальное кол-во итераций для вычисления корней
-def check_iters_cnt():
-    if len(max_count.text()) == 0:
-        create_error('Не введено макс. кол-во итераций', 'Ошибка итераций')
+def check_iters_cnt(max_cnt_text):
+    if len(max_cnt_text) == 0:
+        create_error('Не введено максимальное \nкол-во итераций', 'Ошибка итераций')
         return False
     try:
-        mx_iters_val = int(max_count.text())
+        mx_iters_val = int(max_cnt_text)
 
         if mx_iters_val < 3:
             create_error('Сомнительное кол-во операций', 'Ошибка итераций')
             return False
     except ValueError:
-        create_error('Перевод максимального кол-во итераций', 'Ошибка итераций')
+        create_error('Перевод максимального \nкол-во итераций', 'Ошибка итераций')
         return False
     return True, ''
 
 
 # проверка, корректно ли введён шаг разбиения
-def check_step():
-    if len(step.text()) == 0:
+def check_step(st_val, en_val, step_text):
+    if len(step_text) == 0:
         create_error('Не введён шаг разбиения', 'Ошибка шага')
         return False
     
     try:
-        step_val = float(step.text())
+        step_val = float(step_text)
         
-        en_val = float(bound_end.text())
-        st_val = float(bound_start.text())
         if (en_val - st_val) < step_val:
             create_error('Шаг разбиения больше\nотрезка', 'Ошибка шага')
             return False
@@ -624,12 +615,9 @@ def check_step():
     return True, ''
 
 
-def check_continuous():
-    st = float(bound_start.text())
-    en = float(bound_end.text())
-    f = function_input.text()
-    f = f.replace("^", "**")
-    rc, val =  is_continuous(st, en, f)
+def check_continuous(start_val, end_val, func_text):
+    func_text = func_text.replace("^", "**")
+    rc, val = is_continuous(start_val, end_val, func_text)
     if not rc:
         create_error(f"Функция не может быть \nпосчитана в точке {val}", "Ошибка счёта")
         return False
